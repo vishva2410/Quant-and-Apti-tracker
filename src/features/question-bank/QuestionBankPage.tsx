@@ -99,8 +99,7 @@ export function QuestionBankPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-200 pb-12">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="space-y-6">
         
         {/* Header */}
         <header className="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -327,7 +326,6 @@ export function QuestionBankPage() {
             </div>
           )}
         </div>
-      </div>
     </div>
   )
 }
