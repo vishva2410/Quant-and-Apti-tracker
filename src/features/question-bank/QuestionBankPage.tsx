@@ -127,36 +127,36 @@ export function QuestionBankPage() {
               />
             </div>
             
-            <select value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setTopicFilter('All') }} className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-              <option value="All">All Categories</option>
-              <option value="Quant">Quant</option>
-              <option value="Reasoning">Reasoning</option>
-              <option value="CS Logic">CS Logic</option>
+            <select value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setTopicFilter('All') }} className="bg-zinc-950 border border-zinc-800 hover:border-zinc-700 text-zinc-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer">
+              <option value="All" className="bg-zinc-900 text-zinc-200">All Categories</option>
+              <option value="Quant" className="bg-zinc-900 text-zinc-200">Quant</option>
+              <option value="Reasoning" className="bg-zinc-900 text-zinc-200">Reasoning</option>
+              <option value="CS Logic" className="bg-zinc-900 text-zinc-200">CS Logic</option>
             </select>
 
-            <select value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)} className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 max-w-[150px] truncate">
-              <option value="All">All Topics</option>
-              {availableTopics.map(t => <option key={t} value={t}>{t}</option>)}
+            <select value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)} className="bg-zinc-950 border border-zinc-800 hover:border-zinc-700 text-zinc-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 max-w-[160px] truncate cursor-pointer">
+              <option value="All" className="bg-zinc-900 text-zinc-200">All Topics</option>
+              {availableTopics.map(t => <option key={t} value={t} className="bg-zinc-900 text-zinc-200">{t}</option>)}
             </select>
 
-            <select value={difficultyFilter} onChange={(e) => setDifficultyFilter(e.target.value)} className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-              <option value="All">All Difficulties</option>
-              <option value="Easy">Easy</option>
-              <option value="Medium">Medium</option>
-              <option value="Hard">Hard</option>
+            <select value={difficultyFilter} onChange={(e) => setDifficultyFilter(e.target.value)} className="bg-zinc-950 border border-zinc-800 hover:border-zinc-700 text-zinc-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer">
+              <option value="All" className="bg-zinc-900 text-zinc-200">All Difficulties</option>
+              <option value="Easy" className="bg-zinc-900 text-zinc-200">Easy</option>
+              <option value="Medium" className="bg-zinc-900 text-zinc-200">Medium</option>
+              <option value="Hard" className="bg-zinc-900 text-zinc-200">Hard</option>
             </select>
 
-            <select value={companyFilter} onChange={(e) => setCompanyFilter(e.target.value)} className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 max-w-[150px] truncate">
-              <option value="All">All Companies</option>
-              {COMPANIES.map(c => <option key={c} value={c}>{c}</option>)}
+            <select value={companyFilter} onChange={(e) => setCompanyFilter(e.target.value)} className="bg-zinc-950 border border-zinc-800 hover:border-zinc-700 text-zinc-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 max-w-[160px] truncate cursor-pointer">
+              <option value="All" className="bg-zinc-900 text-zinc-200">All Companies</option>
+              {COMPANIES.map(c => <option key={c} value={c} className="bg-zinc-900 text-zinc-200">{c}</option>)}
             </select>
 
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-              <option value="All">All Statuses</option>
-              <option value="Attempted">Attempted</option>
-              <option value="Unattempted">Unattempted</option>
-              <option value="Correct">Correct</option>
-              <option value="Wrong">Wrong</option>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-zinc-950 border border-zinc-800 hover:border-zinc-700 text-zinc-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer">
+              <option value="All" className="bg-zinc-900 text-zinc-200">All Statuses</option>
+              <option value="Attempted" className="bg-zinc-900 text-zinc-200">Attempted</option>
+              <option value="Unattempted" className="bg-zinc-900 text-zinc-200">Unattempted</option>
+              <option value="Correct" className="bg-zinc-900 text-zinc-200">Correct</option>
+              <option value="Wrong" className="bg-zinc-900 text-zinc-200">Wrong</option>
             </select>
 
             <button onClick={clearFilters} className="p-2 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium">

@@ -148,13 +148,13 @@ const CheatSheetView = ({ dayNumber }: { dayNumber: number }) => {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-[#18181B] border-b border-[#6366F1]">
-                        {section.headers.map((h: string, i: number) => (
+                        {section.table?.headers.map((h: string, i: number) => (
                           <th key={i} className="p-3 text-sm font-semibold text-zinc-300">{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-800 bg-zinc-900/50">
-                      {section.rows.map((row: any[], i: number) => (
+                      {section.table?.rows.map((row: any[], i: number) => (
                         <tr key={i} className="hover:bg-zinc-800/50 transition-colors">
                           {row.map((cell: any, j: number) => (
                             <td key={j} className="p-3 text-sm text-zinc-400">{cell}</td>
