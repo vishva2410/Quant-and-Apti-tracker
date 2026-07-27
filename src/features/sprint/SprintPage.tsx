@@ -10,7 +10,9 @@ import {
   CheckCircle2,
   XCircle,
   Bookmark,
-  Keyboard,
+  ArrowLeft,
+  Code2,
+  FileText
 } from 'lucide-react';
 import { cn, formatTime, getDifficultyColor } from '@/lib/utils';
 import { useQuizStore } from '@/stores/useQuizStore';
@@ -33,11 +35,9 @@ export function SprintPage() {
     currentQuestionIndex,
     selectedAnswer,
     isAnswered,
-    showExplanation,
     showHint,
     currentHintIndex,
     flaggedQuestions,
-    answers,
     loadSprint,
     selectAnswer,
     submitAnswer,
@@ -57,6 +57,9 @@ export function SprintPage() {
   const [showCalc, setShowCalc] = useState(false);
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
   const [showCorrectAnimation, setShowCorrectAnimation] = useState<boolean | null>(null);
+  const [scratchText, setScratchText] = useState('# Scratchpad / Rough Math Steps:\n- Let x be the cost price.\n- Marked Price = 1.4 * x\n- SP after 15% discount = 1.4 * 0.85 * x');
+  const [leftTab, setLeftTab] = useState<'problem' | 'solution' | 'hints'>('problem');
+  const [rightTab, setRightTab] = useState<'options' | 'scratchpad'>('options');
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const currentQuestion = getCurrentQuestion();
@@ -99,7 +102,6 @@ export function SprintPage() {
     const timeSpent = Math.round((Date.now() - questionStartTime) / 1000);
     submitAnswer();
 
-    // Get the updated answer (last one in answers)
     const answerRecord = {
       questionId: currentQuestion.id,
       selectedAnswer: selectedAnswer,
@@ -111,14 +113,11 @@ export function SprintPage() {
       isSkipped: false,
     };
 
-    // Show animation
     setShowCorrectAnimation(answerRecord.isCorrect);
     setTimeout(() => setShowCorrectAnimation(null), 800);
 
-    // Submit to progress store
     submitToProgress(dayNum, sprintNum, answerRecord);
 
-    // Add to review if wrong, slow, or flagged
     const reviewCategories: ReviewCategory[] = [];
     if (!answerRecord.isCorrect) reviewCategories.push('wrong');
     if (timeSpent > currentQuestion.expectedTimeSeconds * SLOW_ANSWER_MULTIPLIER) reviewCategories.push('slow');
@@ -134,6 +133,7 @@ export function SprintPage() {
     } else {
       nextQuestion();
       setQuestionStartTime(Date.now());
+      setLeftTab('problem');
     }
   }, [isLastQuestion, nextQuestion]);
 
@@ -187,8 +187,8 @@ export function SprintPage() {
 
   if (!currentQuestion) {
     return (
-      <div className="min-h-screen bg-[#09090B] flex items-center justify-center">
-        <div className="text-[#71717A] text-lg">Loading questions...</div>
+      <div className="h-screen w-screen bg-[#0A0A0C] flex items-center justify-center text-zinc-400 font-mono text-sm">
+        Loading Sprint Questions...
       </div>
     );
   }
@@ -199,11 +199,12 @@ export function SprintPage() {
     ? 'text-red-400'
     : timeRemaining <= TIMER_WARNING_THRESHOLD
     ? 'text-yellow-400 timer-warning'
-    : 'text-[#A1A1AA]';
+    : 'text-zinc-300';
 
   return (
-    <div className="min-h-screen bg-[#09090B] flex flex-col">
-      {/* Correct/Wrong flash overlay */}
+    <div className="h-screen w-screen bg-[#0A0A0C] text-zinc-100 font-sans flex flex-col overflow-hidden select-none">
+      
+      {/* Visual Flash Feedback */}
       <AnimatePresence>
         {showCorrectAnimation !== null && (
           <motion.div
@@ -219,288 +220,339 @@ export function SprintPage() {
         )}
       </AnimatePresence>
 
-      {/* Top Bar */}
-      <div className="sticky top-0 z-40 bg-[#09090B]/95 backdrop-blur-sm border-b border-[#1E1E23]">
-        <div className="max-w-3xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            {/* Left: Question info */}
-            <div className="flex items-center gap-3">
-              <span className={cn('px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border', getDifficultyColor(currentQuestion.difficulty))}>
-                {currentQuestion.difficulty}
-              </span>
-              <span className="text-xs text-[#71717A]">{currentQuestion.topic}</span>
-            </div>
+      {/* 1. TOP IDE NAVBAR (LeetCode Style) */}
+      <header className="h-12 border-b border-[#1E1E24] bg-[#0F0F13] px-4 flex items-center justify-between shrink-0 z-30">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(`/cheatsheet/${dayNum}`)}
+            className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-100 transition-colors font-medium bg-zinc-900 hover:bg-zinc-800 px-2.5 py-1 rounded-md border border-zinc-800"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Cheat Sheet</span>
+          </button>
 
-            {/* Center: Timer */}
-            <div className={cn('flex items-center gap-1.5 font-mono text-lg font-bold tabular-nums', timerColor)}>
-              <Clock size={16} />
-              {formatTime(timeRemaining)}
-            </div>
+          <span className="text-zinc-700">/</span>
 
-            {/* Right: Question counter */}
-            <div className="flex items-center gap-3">
-              {currentQuestion.companyTags.slice(0, 1).map(tag => (
-                <span key={tag} className="px-2 py-0.5 rounded-md bg-[#6366F1]/10 text-[#818CF8] text-[10px] font-semibold border border-[#6366F1]/20">
-                  {tag}
-                </span>
-              ))}
-              <span className="text-sm font-bold text-[#FAFAFA]">
-                {currentQuestionIndex + 1}<span className="text-[#71717A]">/{questions.length}</span>
-              </span>
-            </div>
-          </div>
-
-          {/* Sprint progress dots */}
-          <div className="flex items-center gap-1 mt-2">
-            {questions.map((_, i) => (
-              <div
-                key={i}
-                className={cn(
-                  'flex-1 h-1 rounded-full transition-all duration-300',
-                  i < currentQuestionIndex && answers[i]?.isCorrect && 'bg-[#22C55E]',
-                  i < currentQuestionIndex && !answers[i]?.isCorrect && 'bg-[#EF4444]',
-                  i === currentQuestionIndex && 'bg-[#6366F1]',
-                  i > currentQuestionIndex && 'bg-[#27272A]'
-                )}
-              />
-            ))}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
+              Q{currentQuestionIndex + 1}/{questions.length}
+            </span>
+            <span className={cn('px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border', getDifficultyColor(currentQuestion.difficulty))}>
+              {currentQuestion.difficulty}
+            </span>
+            <span className="text-xs text-zinc-400 truncate max-w-[200px]">{currentQuestion.topic}</span>
           </div>
         </div>
-      </div>
 
-      {/* Main Question Area */}
-      <div className="flex-1 flex items-center justify-center px-4 py-8">
-        <div className="w-full max-w-2xl">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentQuestion.id}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
+        {/* Center: Timer */}
+        <div className={cn('flex items-center gap-2 font-mono text-base font-bold bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-md tabular-nums', timerColor)}>
+          <Clock className="w-4 h-4 text-indigo-400" />
+          <span>{formatTime(timeRemaining)}</span>
+        </div>
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2">
+          {currentQuestion.companyTags.slice(0, 1).map(tag => (
+            <span key={tag} className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 font-mono hidden sm:inline">
+              {tag}
+            </span>
+          ))}
+
+          {!isAnswered ? (
+            <button
+              onClick={handleSubmitAnswer}
+              disabled={selectedAnswer === null}
+              className={cn(
+                'px-4 py-1.5 rounded-md font-bold text-xs transition-all shadow-md cursor-pointer',
+                selectedAnswer !== null
+                  ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/30'
+                  : 'bg-zinc-800 text-zinc-600 cursor-not-allowed border border-zinc-800'
+              )}
             >
-              {/* Question Text */}
-              <div className="mb-8">
-                <h2 className="text-xl md:text-2xl font-semibold text-[#FAFAFA] leading-relaxed">
-                  {currentQuestion.content.text}
-                </h2>
-                {currentQuestion.content.code && (
-                  <pre className="mt-4 p-4 rounded-xl bg-[#0F0F12] border border-[#1E1E23] font-mono text-sm text-[#A1A1AA] overflow-x-auto">
-                    {currentQuestion.content.code}
-                  </pre>
-                )}
-                {currentQuestion.content.table && (
-                  <div className="mt-4 overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <tbody>
-                        {currentQuestion.content.table.map((row, ri) => (
-                          <tr key={ri} className={ri === 0 ? 'bg-[#6366F1]/10' : 'bg-[#0F0F12]'}>
-                            {row.map((cell, ci) => (
-                              <td key={ci} className="px-3 py-2 border border-[#27272A] text-[#A1A1AA]">
-                                {cell}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+              Submit Answer
+            </button>
+          ) : (
+            <button
+              onClick={handleNext}
+              className="px-4 py-1.5 rounded-md font-bold text-xs bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/30 flex items-center gap-1 cursor-pointer"
+            >
+              <span>{isLastQuestion() ? 'Finish Sprint' : 'Next Question'}</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </header>
+
+      {/* 2. SPLIT SCREEN WORKSPACE (50% Left Problem / 50% Right Options & Scratchpad) */}
+      <div className="flex-1 flex overflow-hidden">
+        
+        {/* LEFT PANEL (50% Width) - Problem Statement & Explanation */}
+        <div className="w-1/2 flex flex-col border-r border-[#1E1E24] bg-[#0A0A0D] overflow-hidden">
+          
+          {/* Left Tabs Bar */}
+          <div className="h-10 border-b border-[#1E1E24] bg-[#0F0F13] px-3 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setLeftTab('problem')}
+                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  leftTab === 'problem'
+                    ? 'bg-zinc-800 text-zinc-100 font-semibold'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5 text-indigo-400" />
+                Problem Statement
+              </button>
+
+              {isAnswered && (
+                <button
+                  onClick={() => setLeftTab('solution')}
+                  className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                    leftTab === 'solution'
+                      ? 'bg-zinc-800 text-zinc-100 font-semibold'
+                      : 'text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  <Bookmark className="w-3.5 h-3.5 text-emerald-400" />
+                  Editorial Solution
+                </button>
+              )}
+
+              <button
+                onClick={() => { toggleHint(); setLeftTab('hints'); }}
+                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  leftTab === 'hints' || showHint
+                    ? 'bg-zinc-800 text-zinc-100 font-semibold'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
+                Hints
+              </button>
+            </div>
+
+            <span className="text-[10px] font-mono text-zinc-500">
+              Est. Time: {currentQuestion.expectedTimeSeconds}s
+            </span>
+          </div>
+
+          {/* Left Content Scrollable */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6 select-text">
+            <div>
+              <div className="text-xs font-mono text-indigo-400 mb-2">Question {currentQuestionIndex + 1}</div>
+              <h2 className="text-lg font-medium text-zinc-100 leading-relaxed whitespace-pre-wrap">
+                {currentQuestion.content.text}
+              </h2>
+
+              {currentQuestion.content.code && (
+                <pre className="mt-4 p-4 rounded-xl bg-zinc-950 border border-zinc-800/80 font-mono text-xs text-zinc-300 overflow-x-auto">
+                  {currentQuestion.content.code}
+                </pre>
+              )}
+
+              {currentQuestion.content.table && (
+                <div className="mt-4 border border-zinc-800 rounded-lg overflow-hidden bg-zinc-950">
+                  <table className="w-full text-xs font-mono">
+                    <tbody>
+                      {currentQuestion.content.table.map((row, ri) => (
+                        <tr key={ri} className={ri === 0 ? 'bg-zinc-900 border-b border-zinc-800 font-bold text-zinc-200' : 'border-b border-zinc-800/50'}>
+                          {row.map((cell, ci) => (
+                            <td key={ci} className="p-2.5 text-zinc-400">{cell}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {(showHint || leftTab === 'hints') && currentQuestion.hints.length > 0 && (
+              <div className="p-4 rounded-xl bg-amber-950/20 border border-amber-500/20 space-y-1">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-400">
+                  <Lightbulb className="w-4 h-4" />
+                  Hint {currentHintIndex + 1}
+                </div>
+                <p className="text-xs text-amber-200/80 leading-relaxed">
+                  {currentQuestion.hints[Math.min(currentHintIndex, currentQuestion.hints.length - 1)]}
+                </p>
+              </div>
+            )}
+
+            {isAnswered && (
+              <div className="space-y-4 pt-4 border-t border-zinc-800">
+                <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 space-y-2">
+                  <h4 className="text-xs font-bold text-indigo-400 font-mono uppercase tracking-wider">Detailed Solution</h4>
+                  <p className="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap">
+                    {currentQuestion.explanation.detailed}
+                  </p>
+                </div>
+
+                {currentQuestion.explanation.shortTrick && (
+                  <div className="p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/20">
+                    <h4 className="text-xs font-bold text-emerald-400 font-mono uppercase tracking-wider mb-1">⚡ Short Trick</h4>
+                    <p className="text-xs text-emerald-200/90 leading-relaxed">{currentQuestion.explanation.shortTrick}</p>
                   </div>
                 )}
               </div>
+            )}
+          </div>
+        </div>
 
-              {/* Options */}
+        {/* RIGHT PANEL (50% Width) - Options Selector & Code Scratchpad */}
+        <div className="w-1/2 flex flex-col bg-[#0A0A0D] overflow-hidden">
+          
+          <div className="h-10 border-b border-[#1E1E24] bg-[#0F0F13] px-3 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setRightTab('options')}
+                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  rightTab === 'options'
+                    ? 'bg-zinc-800 text-zinc-100 font-semibold'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400" />
+                Select Answer Options
+              </button>
+
+              <button
+                onClick={() => setRightTab('scratchpad')}
+                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  rightTab === 'scratchpad'
+                    ? 'bg-zinc-800 text-zinc-100 font-semibold'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <Code2 className="w-3.5 h-3.5 text-amber-400" />
+                Scratchpad
+              </button>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <button
+                onClick={toggleFlag}
+                className={cn(
+                  'p-1.5 rounded transition-colors text-xs',
+                  flaggedQuestions.includes(currentQuestion.id)
+                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                )}
+                title="Flag question (F)"
+              >
+                <Flag className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setShowCalc(!showCalc)}
+                className={cn(
+                  'p-1.5 rounded transition-colors text-xs',
+                  showCalc
+                    ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                )}
+                title="Toggle Calculator (C)"
+              >
+                <Calculator className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            {rightTab === 'options' ? (
               <div className="space-y-3">
+                <div className="text-xs font-mono text-zinc-500 mb-2">
+                  Select the correct choice (or press keys 1, 2, 3, 4):
+                </div>
+
                 {currentQuestion.options.map((option, index) => {
                   const isSelected = selectedAnswer === option.id;
                   const isCorrectOption = isAnswered && option.id === currentQuestion.correctAnswer;
                   const isWrongSelected = isAnswered && isSelected && option.id !== currentQuestion.correctAnswer;
 
                   return (
-                    <motion.button
+                    <button
                       key={option.id}
-                      whileHover={!isAnswered ? { scale: 1.01 } : undefined}
-                      whileTap={!isAnswered ? { scale: 0.99 } : undefined}
                       onClick={() => !isAnswered && selectAnswer(option.id)}
                       disabled={isAnswered}
                       className={cn(
-                        'w-full flex items-center gap-4 p-4 rounded-xl border text-left transition-all duration-200',
-                        !isAnswered && !isSelected && 'bg-[#18181B] border-[#27272A] hover:border-[#6366F1]/40 hover:bg-[#18181B]/80',
-                        !isAnswered && isSelected && 'bg-[#6366F1]/10 border-[#6366F1]/40 accent-glow',
-                        isCorrectOption && 'bg-[#22C55E]/10 border-[#22C55E]/40 correct-glow',
-                        isWrongSelected && 'bg-[#EF4444]/10 border-[#EF4444]/40 wrong-glow',
-                        isAnswered && !isCorrectOption && !isWrongSelected && 'opacity-40'
+                        'w-full flex items-center gap-3.5 p-4 rounded-xl border text-left transition-all duration-150 cursor-pointer',
+                        !isAnswered && !isSelected && 'bg-zinc-900/90 border-zinc-800 hover:border-indigo-500/40 hover:bg-zinc-900',
+                        !isAnswered && isSelected && 'bg-indigo-600/10 border-indigo-500 text-indigo-100 shadow-md shadow-indigo-600/10',
+                        isCorrectOption && 'bg-emerald-950/30 border-emerald-500/60 text-emerald-100',
+                        isWrongSelected && 'bg-rose-950/30 border-rose-500/60 text-rose-100',
+                        isAnswered && !isCorrectOption && !isWrongSelected && 'opacity-40 bg-zinc-950 border-zinc-800'
                       )}
                     >
-                      {/* Option letter */}
                       <span
                         className={cn(
-                          'w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold shrink-0',
-                          !isAnswered && !isSelected && 'bg-[#27272A] text-[#A1A1AA]',
-                          !isAnswered && isSelected && 'bg-[#6366F1] text-white',
-                          isCorrectOption && 'bg-[#22C55E] text-white',
-                          isWrongSelected && 'bg-[#EF4444] text-white',
-                          isAnswered && !isCorrectOption && !isWrongSelected && 'bg-[#27272A] text-[#71717A]'
+                          'w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold font-mono shrink-0',
+                          !isAnswered && !isSelected && 'bg-zinc-800 text-zinc-400',
+                          !isAnswered && isSelected && 'bg-indigo-600 text-white',
+                          isCorrectOption && 'bg-emerald-500 text-white',
+                          isWrongSelected && 'bg-rose-500 text-white',
+                          isAnswered && !isCorrectOption && !isWrongSelected && 'bg-zinc-800 text-zinc-600'
                         )}
                       >
                         {showKeyboardShortcuts && !isAnswered ? (index + 1) : String.fromCharCode(65 + index)}
                       </span>
 
-                      <span className="flex-1 text-[#FAFAFA] text-base">{option.text}</span>
+                      <span className="flex-1 text-zinc-100 text-sm">{option.text}</span>
 
-                      {isCorrectOption && (
-                        <CheckCircle2 size={20} className="text-[#22C55E] shrink-0" />
-                      )}
-                      {isWrongSelected && (
-                        <XCircle size={20} className="text-[#EF4444] shrink-0" />
-                      )}
-                    </motion.button>
+                      {isCorrectOption && <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />}
+                      {isWrongSelected && <XCircle className="w-5 h-5 text-rose-400 shrink-0" />}
+                    </button>
                   );
                 })}
               </div>
-
-              {/* Hint */}
-              <AnimatePresence>
-                {showHint && currentQuestion.hints.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="mt-4 p-4 rounded-xl bg-[#F59E0B]/5 border border-[#F59E0B]/20"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <Lightbulb size={14} className="text-[#F59E0B]" />
-                      <span className="text-xs font-semibold text-[#F59E0B]">Hint</span>
-                    </div>
-                    <p className="text-sm text-[#A1A1AA]">
-                      {currentQuestion.hints[Math.min(currentHintIndex, currentQuestion.hints.length - 1)]}
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Explanation (shown after answering) */}
-              <AnimatePresence>
-                {isAnswered && showExplanation && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="mt-4 space-y-3"
-                  >
-                    <div className="p-4 rounded-xl bg-[#18181B] border border-[#27272A]">
-                      <h4 className="text-xs font-bold text-[#6366F1] uppercase tracking-wider mb-2">Solution</h4>
-                      <p className="text-sm text-[#A1A1AA] leading-relaxed whitespace-pre-line">
-                        {currentQuestion.explanation.detailed}
-                      </p>
-                    </div>
-                    {currentQuestion.explanation.shortTrick && (
-                      <div className="p-3 rounded-xl bg-[#22C55E]/5 border border-[#22C55E]/20">
-                        <h4 className="text-[10px] font-bold text-[#22C55E] uppercase tracking-wider mb-1">⚡ Short Trick</h4>
-                        <p className="text-sm text-[#A1A1AA]">{currentQuestion.explanation.shortTrick}</p>
-                      </div>
-                    )}
-                    {currentQuestion.explanation.commonMistake && (
-                      <div className="p-3 rounded-xl bg-[#EF4444]/5 border border-[#EF4444]/20">
-                        <h4 className="text-[10px] font-bold text-[#EF4444] uppercase tracking-wider mb-1">⚠️ Common Mistake</h4>
-                        <p className="text-sm text-[#A1A1AA]">{currentQuestion.explanation.commonMistake}</p>
-                      </div>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </div>
-
-      {/* Bottom Action Bar */}
-      <div className="sticky bottom-0 bg-[#09090B]/95 backdrop-blur-sm border-t border-[#1E1E23]">
-        <div className="max-w-3xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            {/* Left actions */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={toggleFlag}
-                className={cn(
-                  'p-2 rounded-lg border transition-all',
-                  flaggedQuestions.includes(currentQuestion.id)
-                    ? 'bg-[#F59E0B]/10 border-[#F59E0B]/30 text-[#F59E0B]'
-                    : 'bg-[#18181B] border-[#27272A] text-[#71717A] hover:text-[#A1A1AA]'
-                )}
-                title="Flag question (F)"
-              >
-                <Flag size={16} />
-              </button>
-              <button
-                onClick={toggleHint}
-                className="p-2 rounded-lg bg-[#18181B] border border-[#27272A] text-[#71717A] hover:text-[#A1A1AA] transition-all"
-                title="Show hint (H)"
-              >
-                <Lightbulb size={16} />
-              </button>
-              <button
-                onClick={() => setShowCalc(!showCalc)}
-                className={cn(
-                  'p-2 rounded-lg border transition-all',
-                  showCalc
-                    ? 'bg-[#6366F1]/10 border-[#6366F1]/30 text-[#6366F1]'
-                    : 'bg-[#18181B] border-[#27272A] text-[#71717A] hover:text-[#A1A1AA]'
-                )}
-                title="Calculator (C)"
-              >
-                <Calculator size={16} />
-              </button>
-              {isAnswered && (
-                <button
-                  onClick={toggleExplanation}
-                  className={cn(
-                    'p-2 rounded-lg border transition-all',
-                    showExplanation
-                      ? 'bg-[#6366F1]/10 border-[#6366F1]/30 text-[#6366F1]'
-                      : 'bg-[#18181B] border-[#27272A] text-[#71717A] hover:text-[#A1A1AA]'
-                  )}
-                  title="Explanation (E)"
-                >
-                  <Bookmark size={16} />
-                </button>
-              )}
-            </div>
-
-            {/* Keyboard hint */}
-            {showKeyboardShortcuts && (
-              <div className="hidden md:flex items-center gap-1 text-[10px] text-[#3F3F46]">
-                <Keyboard size={12} />
-                <span>1-4 select · Enter submit · Space next · F flag · H hint</span>
+            ) : (
+              <div className="h-full flex flex-col font-mono text-xs bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden">
+                <div className="bg-zinc-900 px-3 py-1.5 text-zinc-500 border-b border-zinc-800 text-[11px]">
+                  Rough Scratchpad / Step-by-Step Math Notes
+                </div>
+                <textarea
+                  value={scratchText}
+                  onChange={(e) => setScratchText(e.target.value)}
+                  spellCheck={false}
+                  placeholder="Type formulas or scratch work here..."
+                  className="w-full flex-1 bg-transparent p-3 text-amber-200/90 font-mono text-xs leading-5 resize-none focus:outline-none select-text"
+                />
               </div>
             )}
+          </div>
 
-            {/* Right: Submit/Next button */}
-            <div>
+          <div className="h-14 border-t border-[#1E1E24] bg-[#09090C] px-4 flex items-center justify-between shrink-0">
+            <div className="text-[11px] text-zinc-500 font-mono hidden sm:block">
+              {showKeyboardShortcuts && <span>Press <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-300 border border-zinc-700">Enter ↵</kbd> to submit</span>}
+            </div>
+
+            <div className="flex items-center gap-3 ml-auto">
               {!isAnswered ? (
                 <button
                   onClick={handleSubmitAnswer}
                   disabled={selectedAnswer === null}
                   className={cn(
-                    'flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200',
+                    'px-6 py-2 rounded-lg font-bold text-xs transition-all shadow-md cursor-pointer',
                     selectedAnswer !== null
-                      ? 'bg-[#6366F1] hover:bg-[#4F46E5] text-white accent-glow hover:scale-[1.02] active:scale-[0.98]'
-                      : 'bg-[#27272A] text-[#71717A] cursor-not-allowed'
+                      ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/30'
+                      : 'bg-zinc-800 text-zinc-600 cursor-not-allowed border border-zinc-800'
                   )}
                 >
-                  Submit
+                  Submit Answer
                 </button>
               ) : (
                 <button
                   onClick={handleNext}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] text-white font-semibold text-sm transition-all duration-200 accent-glow hover:scale-[1.02] active:scale-[0.98]"
+                  className="px-6 py-2 rounded-lg font-bold text-xs bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/30 flex items-center gap-1.5 cursor-pointer"
                 >
-                  {isLastQuestion() ? 'Finish Sprint' : 'Next'}
-                  <ChevronRight size={16} />
+                  <span>{isLastQuestion() ? 'Finish Sprint' : 'Next Question'}</span>
+                  <ChevronRight className="w-4 h-4" />
                 </button>
               )}
             </div>
           </div>
+
         </div>
+
       </div>
     </div>
   );
